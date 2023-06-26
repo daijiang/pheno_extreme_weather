@@ -1,7 +1,7 @@
-source("code/07_get_all_envi_data.R")
+source("code/00_pkg_functions.R")
 
 if(!file.exists("data_output/d_for_stat.rds")){
-  d = df_25k_pheno_all
+  d = read_rds("data_output/df_25km_pheno_all.rds")
   
   names(d)
   n_distinct(d$sp) # 997
