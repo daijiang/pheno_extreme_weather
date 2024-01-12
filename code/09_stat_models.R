@@ -194,22 +194,21 @@ summary(m_duration_1_2)
 
 m_onset <- lmer(onset ~ tmean_5_yr_ave * taxon + 
                   temp_seasonality_5_yr_ave * taxon +
-                  precip_5_yr_ave * taxon  +
-                  precip_seasonality_5_yr_ave * taxon +
-                  prop_extreme_warm_days_before_onset_logit * taxon  + 
-                  prop_extreme_cold_days_before_onset_logit * taxon  +
-                  prop_extreme_wet_days_before_onset_logit * taxon  +
-                  prop_extreme_dry_days_before_onset_logit * taxon  +
-                  prop_extreme_warm_days_before_onset_logit * tmean_5_yr_ave * taxon +
-                  prop_extreme_cold_days_before_onset_logit * tmean_5_yr_ave * taxon +
-                  prop_extreme_wet_days_before_onset_logit * precip_5_yr_ave * taxon +
-                  prop_extreme_dry_days_before_onset_logit * precip_5_yr_ave * taxon +
-                  # prop_extreme_cold_days_before_onset_logit * prop_extreme_warm_days_before_onset_logit * taxon +
-                  # prop_extreme_dry_days_before_onset_logit * prop_extreme_wet_days_before_onset_logit * taxon +
-                  prop_extreme_warm_days_before_onset_logit * prop_extreme_dry_days_before_onset_logit * taxon +
-                  prop_extreme_warm_days_before_onset_logit * prop_extreme_wet_days_before_onset_logit * taxon +
-                  n_days_log +  # to count for collection effort
-                  (1|sp) + (1 | id_cells) + (1 | yr) +
+                    precip_5_yr_ave * taxon +
+                    precip_seasonality_5_yr_ave * taxon +
+                    prop_extreme_warm_days_before_onset_logit * taxon +
+                    prop_extreme_cold_days_before_onset_logit * taxon +
+                    prop_extreme_wet_days_before_onset_logit * taxon +
+                    prop_extreme_dry_days_before_onset_logit * taxon +
+                    prop_extreme_warm_days_before_onset_logit * tmean_5_yr_ave * taxon +
+                    prop_extreme_cold_days_before_onset_logit * tmean_5_yr_ave * taxon +
+                    prop_extreme_wet_days_before_onset_logit * precip_5_yr_ave * taxon +
+                    prop_extreme_dry_days_before_onset_logit * precip_5_yr_ave * taxon +
+                    prop_extreme_warm_days_before_onset_logit * prop_extreme_dry_days_before_onset_logit * taxon +
+                    prop_extreme_warm_days_before_onset_logit * prop_extreme_wet_days_before_onset_logit * taxon +
+                    n_days_log + # to count for collection effort
+                    (1 | sp) + (1 | id_cells) + (1 | yr) +
+                    # too many parameters if include cor between intercept and slopes
                   (0 + prop_extreme_warm_days_before_onset_logit | sp) + 
                   (0 + prop_extreme_cold_days_before_onset_logit | sp) + 
                   (0 + prop_extreme_wet_days_before_onset_logit | sp) +
@@ -314,8 +313,6 @@ m_duration <- lmer(duration_log ~ tmean_5_yr_ave * taxon +
                      prop_extreme_dry_days_total_logit * precip_5_yr_ave * taxon +
                      prop_extreme_warm_days_total_logit * prop_extreme_dry_days_total_logit * taxon +
                      prop_extreme_warm_days_total_logit * prop_extreme_wet_days_total_logit * taxon +
-                     # prop_extreme_dry_days_total_logit * prop_extreme_wet_days_total_logit * taxon +
-                     # prop_extreme_warm_days_total_logit * prop_extreme_cold_days_total_logit * taxon +
                      n_days_log +  # to count for collection effort
                      (1|sp) + (1 | id_cells) + (1 | yr) +
                      (0 + prop_extreme_warm_days_total_logit | sp) + 
@@ -333,13 +330,12 @@ step_onset = step(m_onset)
 step_offset = step(m_offset)
 step_duration = step(m_duration)
 
+# some convergence warning, double checked, and the results are robust
+
 m_onset_final = get_model(step_onset)
 m_offset_final = get_model(step_offset)
 m_duration_final = get_model(step_duration)
 
-# m_onset_final = update(m_onset_final, REML = T)
-# m_offset_final = update(m_offset_final, REML = T)
-# m_duration_final = update(m_duration_final, REML = T)
 
 summary(m_onset_final)
 
@@ -361,10 +357,10 @@ tibble(phenology = c("Onset", "Onset", "Onset", "Offset", "Offset", "Offset", "D
                  m_duration_0, m_duration_1, m_duration_final)$AIC) |> 
   group_by(phenology) |> 
   mutate(delta_AIC = AIC - min(AIC)) |> 
-  ungroup() |> 
-  mutate(model_weight = rep(c(0, 0, 1), 3))
+  ungroup()
 
 
+# different baseline to get plants' coef
 # m_onset_final = update(m_onset_final, REML= T)
 m_onset_final_2 = update(m_onset_final, data = mutate(d2, taxon = factor(taxon, levels = c("plant", "insect"))))
 

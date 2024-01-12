@@ -4,6 +4,9 @@ load("data_output/models.RData")
 load("data_output/models_insects.RData")
 load("data_output/models_plants.RData")
 
+
+### VERY time consuming!! Could not finish most models after two days.
+
 # # phylogenies
 # 
 # # combine insects and plants into one tree?? 

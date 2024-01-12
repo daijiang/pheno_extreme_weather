@@ -1,6 +1,8 @@
 xfun::pkg_attach2(c("tidyverse", "lme4", "lmerTest", "sjPlot", "knitr", "kableExtra", "phyr", "ape"))
 d2 = readRDS("data_output/d_for_stat.rds")
 
+### VERY time consuming!! Could not finish most models after two days.
+
 # group_by(d2, taxon) |> 
 #   summarise(nsp = n_distinct(sp))
 # summary(m_onset_final)
