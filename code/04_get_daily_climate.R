@@ -1,13 +1,22 @@
 source("code/00_pkg_functions.R")
 
-## get daily climate data ----
+## get daily climate data for all grid cells in the USA ----
+
+# decided to get data for all grid cells, so that we don't need to rerun everything if
+# the data changed
+
+# downside is that the files will be bigger
+
+
+# 7/13/2023: it turns out that would be too much to handle. After almost 20 hours, it just finished 6 files
+
 getwd()
-x = terra::rast("../../common_data/climate/Daymet_V4_daily/daymet_v4_daily_na_prcp_1980.nc")
-
-y = readRDS("data/grids_usa_used.rds")
-# change crs to match the climate data
-y2 = st_transform(y, crs(x))
-
+# x = terra::rast("../../common_data/climate/Daymet_V4_daily/daymet_v4_daily_na_prcp_1980.nc")
+# 
+# y = readRDS("data_output/grids_usa_used.rds")
+# 
+# # change crs to match the climate data
+# y2 = st_transform(y, crs(x))
 
 # extract daily data from 1980-2022 for each grid cell ----
 for(i in list.files("../../common_data/climate/Daymet_V4_daily")){
@@ -19,7 +28,7 @@ for(i in list.files("../../common_data/climate/Daymet_V4_daily")){
   
   y2_climate <- pbmclapply(1:nlyr(x), function(j){
     terra::extract(x[[j]], y2, fun = mean, na.rm = TRUE)
-  }, mc.cores = 50)
+  }, mc.cores = 60)
   
   y2_climate2 = purrr::reduce(y2_climate, left_join, by = "ID")
   colnames(y2_climate2) = c("ID", as.character(time(x)))
@@ -28,6 +37,7 @@ for(i in list.files("../../common_data/climate/Daymet_V4_daily")){
   
   write_rds(y2_climate3, f_save)
 }
+
 
 
 

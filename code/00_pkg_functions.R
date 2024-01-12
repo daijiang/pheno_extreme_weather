@@ -2,8 +2,8 @@
 if(!require("xfun")) install.packages(xfun)
 # if(!require("prism")) remotes::install_github("daijiang/prism")
 # if(!require(phenesse)) remotes::install_github("mbelitz/phenesse")
-xfun::pkg_attach2(c("tidyverse", "raster", "sf", "terra",
-                    # "prism", "phenesse", 
+xfun::pkg_attach2(c("tidyverse", "raster", "sf", "terra", "phenesse", 
+                    # "prism", 
                     "lubridate", "parallel", "corrplot", "lmerTest", "sjPlot",
                     "broom.mixed", "pbmcapply", "phyr"))
 
@@ -42,7 +42,7 @@ plt_summary = function(
     dat = tibble(long = runif(300, -110, -85),
                  lat = runif(300, 26, 45), z = 1),
     n_per_cell = 5, days_per_cell = 3, sd_cutoff = 3.5,
-    show_fig = FALSE, plt_base, grids_usa){
+    show_fig = FALSE, plt_base, grids_usa, cell_size = 25000){
   # is there any cell with most obs from one day of a year? likely because of iNat city challenge
   # 2019: April 26 - 29
   # 2018: April 27 - 30
@@ -194,9 +194,10 @@ run_phenesse2 <- function(df, minimum_obs = 10, minimum_days = 3,
                           earliest_year = 2017, last_year = 2019, 
                           flowering_cutoff = "01-01", n_item = 500,
                           onset_perct = 0.05, offset_perct = 0.95, num_cores = 6,
-                          save_rds = FALSE){
+                          save_rds = FALSE,
+                          rds_folder_path = "data_output/phenesse_outputs"){
   if(nrow(df) == 0) return(tibble())
-  if(file.exists(paste0("data_output/phenesse_outputs/phenesse_", gsub(" ", "_", unique(df$sp)), ".rds"))){
+  if(file.exists(paste0(rds_folder_path, "/phenesse_", gsub(" ", "_", unique(df$sp)), ".rds"))){
     return(NULL)
   }
   
@@ -291,7 +292,15 @@ run_phenesse2 <- function(df, minimum_obs = 10, minimum_days = 3,
   
   cell_duration = left_join(df_summary, cell_duration, by = c("yr", "id_cells"))
   
-  if(save_rds) saveRDS(cell_duration, file = paste0("data_output/phenesse_outputs/phenesse_", gsub(" ", "_", unique(df$sp)), ".rds"))
+  if(save_rds) saveRDS(cell_duration, file = paste0(rds_folder_path, "/phenesse_", 
+                                                    gsub(" ", "_", unique(df$sp)), ".rds"))
   
   return(cell_duration)
+}
+
+logit_trans = function(x){
+  stopifnot(all(x >= 0) & all(x <= 1))
+  x = ifelse(x == 0, x + 0.01, x)
+  x = ifelse(x == 1, x - 0.01, x)
+  log(x / (1 - x))
 }

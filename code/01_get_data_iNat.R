@@ -1,98 +1,128 @@
 source("code/00_pkg_functions.R")
 
-if(!file.exists("data_output/d2.rds")){
-  annotated_inat <- arrow::read_csv_arrow("../../common_data/phenobase_iNat/data/phenobase_dwca/observations.csv")
-  
-  flowering_yes_inat = filter(annotated_inat, 
-                              reproductiveCondition %in% c("flowering", "flower budding", 
-                                                           "flowering|flower budding"))
-  
-  
+if(!file.exists("data_output/d2_insects.rds")){
+  # data downloaded in common_data/phenobase_iNat folder
+  inat_gbif = data.table::fread(input = "../../common_data/phenobase_iNat/data/iNat_GBIF/observations.csv",
+                                select = c("eventDate", "decimalLatitude", "decimalLongitude", "coordinateUncertaintyInMeters", 
+                                           "countryCode", "scientificName", "taxonRank", "family", "kingdom", "sex",
+                                           "lifeStage", "reproductiveCondition"))
   
   # where to focus? US?
-  names(flowering_yes_inat)
-  table(flowering_yes_inat$datasetName)
-  table(flowering_yes_inat$basisOfRecord)
-  sort(table(flowering_yes_inat$countryCode)) # 1.4 m from US, the next largest is CA with 181 k
   # so focus on US alone? seems to be reasonable
-  table(flowering_yes_inat$stateProvince)
-  
   usa_box = tibble(long_min = -127.86923, long_max = -65.15705,
                    lat_min = 22.94453, lat_max = 51.64284)
   
-  d <- flowering_yes_inat |> 
+  inat_gbif <- inat_gbif |> 
     drop_na(decimalLongitude, decimalLatitude) |> 
-    filter(datasetName == "iNaturalist research-grade observations",
-           # countryCode %in% c("US"), # not sure how accurate this be
-           decimalLongitude > usa_box$long_min, decimalLongitude < usa_box$long_max,
+    filter(decimalLongitude > usa_box$long_min, decimalLongitude < usa_box$long_max,
            decimalLatitude > usa_box$lat_min, decimalLatitude < usa_box$lat_max) |> 
-    dplyr::select(scientificName, taxonRank, family, genus, eventDate, decimalLatitude,
-                  decimalLongitude, stateProvince, coordinateUncertaintyInMeters, 
-                  reproductiveCondition) |> 
-    distinct()
+    filter(countryCode %in% c("US"), # not sure how accurate this be
+           is.na(coordinateUncertaintyInMeters) | coordinateUncertaintyInMeters < 30000) 
   
-  # us = readRDS("data/ecography/usa_map.rds") 
+  inat_gbif = mutate(inat_gbif, yr = year(eventDate), mth = month(eventDate), doy = yday(eventDate)) |> 
+    filter(yr >= 2016)
   
-  sort(unique(d$stateProvince))
+  inat_gbif = filter(inat_gbif, taxonRank %in% c("species", "subspecies", "variety", "hybrid"))
   
-  d = filter(d, !stateProvince %in% c("Alaska", "Hawaii")) 
+  inat_gbif = mutate(inat_gbif, sp = str_extract(scientificName, "^[^ ]+ ×? ?[^ ]+"),
+                     sp = str_trim(sp),
+                     genus = str_extract(sp, "^[^ ]+"))
   
-  summary(d$coordinateUncertaintyInMeters)
-  hist(d$coordinateUncertaintyInMeters)
-  sum(d$coordinateUncertaintyInMeters < 30000, na.rm = T)
+  inat_gbif = dplyr::select(inat_gbif, -coordinateUncertaintyInMeters, -countryCode, -scientificName)
   
-  # uncertainty
-  d = filter(d, is.na(coordinateUncertaintyInMeters) | coordinateUncertaintyInMeters < 30000)
+  ## confirmed that all data are in the US
+  # dplyr::select(inat_gbif, decimalLongitude, decimalLatitude) |>
+  #   distinct() |>
+  #   sample_frac(0.05) |>
+  #   st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4316) |>
+  #   plot()
   
-  d = mutate(d, eventDate = as.Date(eventDate))
+  ## plants ----
   
+  inat_plant = filter(inat_gbif, kingdom == "Plantae",  
+                      reproductiveCondition %in% c("flowering", "flower budding", "flowering|flower budding")) |> 
+    dplyr::select(sp, decimalLatitude, decimalLongitude, eventDate, yr, mth, doy)
+  n_distinct(inat_plant$sp) # 12,238
+  table(inat_plant$yr)
+  
+  # add the GCB data?
   # add the GCB data?
   d_gcb = read_csv("data/all_dat_gcb.csv")
   table(d_gcb$flowers)
   d_gcb = rename(d_gcb, decimalLatitude = latitude, decimalLongitude = longitude, 
-                 scientificName = scientific_name, eventDate = observed_on) |> 
-    mutate(reproductiveCondition = "flowering_mannual_score",
-           taxonRank = "species") |> 
-    select(-id_iNat, -flowers)
-  d_gcb$scientificName[d_gcb$scientificName == "Viola sororia_1"] = "Viola sororia"
-  d_gcb$scientificName[d_gcb$scientificName == "Viola sororia_2"] = "Viola sororia"
+                 sp = scientific_name, eventDate = observed_on) |> 
+    dplyr::select(-id_iNat, -flowers)
+  d_gcb$sp[d_gcb$sp == "Viola sororia_1"] = "Viola sororia"
+  d_gcb$sp[d_gcb$sp == "Viola sororia_2"] = "Viola sororia"
+  d_gcb = mutate(d_gcb, yr = year(eventDate), doy = yday(eventDate))
   
-  d = bind_rows(d, d_gcb)
+  d_plant = bind_rows(inat_plant, d_gcb)
   # when? recent years.
   
   
-  d = mutate(d, yr = year(eventDate), mth = month(eventDate), doy = yday(eventDate)) |> 
-    select(-coordinateUncertaintyInMeters)
+  table(d_plant$yr)
   
-  table(d$taxonRank)
-  table(d$yr)
+  d_plant = filter(d_plant, yr %in% 2016:2022)
   
-  d = filter(d, yr %in% 2016:2022,
-             taxonRank %in% c("species", "subspecies", "variety"))
+  n_distinct(d_plant$sp) # 11,787
   
-  n_distinct(d$scientificName) # 14,031
-  sort(unique(d$scientificName))
-  
-  d = mutate(d, sp = str_extract(scientificName, "^[^ ]+ [^ ]+"))
-  n_distinct(d$sp) # 11,593
-  sort(unique(d$sp))
-  
-  dn = d |> group_by(sp) |> tally()
+  dn = d_plant |> group_by(sp) |> tally()
   # most species have < 100 observations
   sp_keep = filter(dn, n >= 100)$sp
   
-  d2 = filter(d, sp %in% sp_keep, 
-              decimalLongitude < 0)
+  d2_plants = filter(
+    d_plant, sp %in% sp_keep,
+    decimalLongitude < 0
+  )
+  
+  n_distinct(d2_plants$sp)
+  
+  saveRDS(d2_plants, "data_output/d2_plants.rds")
+  
+  # insects ----
+  
+  # d_insects = readRDS("data/lepidoptera_usa_16_22.rds")
+  d_insects = filter(inat_gbif, 
+                     family %in% c("Papilionidae", "Nymphalidae", "Pieridae", 
+                                   "Lycaenidae", "Hesperiidae", "Riodinidae",
+                                   "Saturniidae", "Sphingidae"))
+  
+  count(d_insects, lifeStage)
   
   
-  # d2 |> group_by(sp) |> tally() |> View()
+  # load("data_output/models.RData")
+  # inat_insect2 = filter(d_insects, sp %in% unique(model.frame(m_onset_final)$sp))
+  # inat_insect2_larva = inat_insect2 |>
+  #   group_by(sp) |>
+  #   summarise(n_larva = sum(lifeStage == "larva", na.rm = T),
+  #             n_total = n()) |>
+  #   mutate(lp = n_larva / n_total)
+  # summary(inat_insect2_larva$lp)
+  # # # Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+  # # # 0.000000 0.000000 0.001533 0.042218 0.028358 0.814536 
   
-  saveRDS(d2, "data_output/d2.rds")
+  
+  d_insects = filter(d_insects, !lifeStage %in% c("egg", "larva", "pupa"))
+  
+  table(d_insects$yr)
+  
+  
+  n_distinct(d_insects$sp) # 906
+  sort(unique(d_insects$sp))
+  
+  
+  dn = d_insects |> group_by(sp) |> tally()
+  # most species have < 100 observations
+  sp_keep = filter(dn, n >= 100)$sp
+  
+  d2_insects = filter(d_insects, sp %in% sp_keep) |> 
+    dplyr::select(sp, decimalLatitude, decimalLongitude, eventDate, yr, mth, doy)
+    n_distinct(d2_insects$sp)
+    dim(d2_insects)
+  
+  write_rds(d2_insects, "data_output/d2_insects.rds")
 } else {
-  d2 = read_rds("data_output/d2.rds")
+  d2_plants = read_rds("data_output/d2_plants.rds") # plants
+  d2_insects = read_rds("data_output/d2_insects.rds")
 }
-
-
-
-
 
