@@ -239,6 +239,124 @@ if(!file.exists("data_output/d_for_stat.rds")){
            duration_log = log(duration)
     )
   
+  names(d)
+  saveRDS(d, "data_output/d_raw_for_stat.rds")
+  
+  d_ave_std = d[, c("prop_extreme_warm_days_before_onset_logit", 
+        "prop_extreme_cold_days_before_onset_logit",
+        "prop_extreme_wet_days_before_onset_logit",
+        "prop_extreme_dry_days_before_onset_logit",
+        "prop_extreme_warm_days_within_duration_logit",
+        "prop_extreme_cold_days_within_duration_logit",
+        "prop_extreme_wet_days_within_duration_logit",
+        "prop_extreme_dry_days_within_duration_logit",
+        "prop_extreme_warm_days_total_logit",
+        "prop_extreme_cold_days_total_logit",
+        "prop_extreme_wet_days_total_logit",
+        "prop_extreme_dry_days_total_logit",
+        "temp_seasonality_5_yr_ave",
+        "precip_seasonality_5_yr_ave",
+        "precip_5_yr_ave",
+        "tmean_5_yr_ave")] |> 
+    pivot_longer(cols = 1:16, names_to = "var", values_to = "value") |> 
+    group_by(var) |> 
+    summarise(ave = mean(value), std = sd(value), .groups = "drop") |> 
+    mutate(up_1 = ave + std, low_1 = ave - std,
+           up_1.5 = ave + 1.5 * std, low_1.5 = ave - 1.5 * std)
+  
+  saveRDS(d_ave_std, "data_output/d_ave_std.rds")
+  
+  
+  d_ave_std2 = filter(d_ave_std, grepl("prop_", var), grepl("onset", var)) |> 
+    mutate(low_2 = ave - 2 * std, up_2 = ave + 2 * std, 
+           up_3 = ave + 3 * std, up_4 = ave + 4 * std) |> 
+    mutate_if(is.numeric, logit_back_to_prop) |> 
+    mutate_if(is.numeric, function(x) 61 * x)
+  
+  d_medium = d |> group_by(taxon, sp) |> 
+    summarise(onset_medium = median(onset, na.rm = T),
+              offset_medium = median(offset, na.rm = T), .groups = "drop")
+  
+  d_medium = mutate(d_medium, pheno_season = ifelse(onset_medium < 120, "early", # before May
+                                                      ifelse(offset_medium > 240, "late", "middle")))
+  
+  count(d_medium, taxon, pheno_season)
+  
+  d_early = filter(d, sp %in% filter(d_medium, pheno_season == "early")$sp)
+  d_late = filter(d, sp %in% filter(d_medium, pheno_season == "late")$sp)
+  d_middle = filter(d, sp %in% filter(d_medium, pheno_season == "middle")$sp)
+  
+  d_early_ave_std = d_early[, c("prop_extreme_warm_days_before_onset_logit", 
+                    "prop_extreme_cold_days_before_onset_logit",
+                    "prop_extreme_wet_days_before_onset_logit",
+                    "prop_extreme_dry_days_before_onset_logit",
+                    "prop_extreme_warm_days_within_duration_logit",
+                    "prop_extreme_cold_days_within_duration_logit",
+                    "prop_extreme_wet_days_within_duration_logit",
+                    "prop_extreme_dry_days_within_duration_logit",
+                    "prop_extreme_warm_days_total_logit",
+                    "prop_extreme_cold_days_total_logit",
+                    "prop_extreme_wet_days_total_logit",
+                    "prop_extreme_dry_days_total_logit",
+                    "temp_seasonality_5_yr_ave",
+                    "precip_seasonality_5_yr_ave",
+                    "precip_5_yr_ave",
+                    "tmean_5_yr_ave")] |> 
+    pivot_longer(cols = 1:16, names_to = "var", values_to = "value") |> 
+    group_by(var) |> 
+    summarise(ave = mean(value), std = sd(value), .groups = "drop") |> 
+    mutate(up_1 = ave + std, low_1 = ave - std,
+           up_1.5 = ave + 1.5 * std, low_1.5 = ave - 1.5 * std)
+  
+  d_middle_ave_std = d_middle[, c("prop_extreme_warm_days_before_onset_logit", 
+                                "prop_extreme_cold_days_before_onset_logit",
+                                "prop_extreme_wet_days_before_onset_logit",
+                                "prop_extreme_dry_days_before_onset_logit",
+                                "prop_extreme_warm_days_within_duration_logit",
+                                "prop_extreme_cold_days_within_duration_logit",
+                                "prop_extreme_wet_days_within_duration_logit",
+                                "prop_extreme_dry_days_within_duration_logit",
+                                "prop_extreme_warm_days_total_logit",
+                                "prop_extreme_cold_days_total_logit",
+                                "prop_extreme_wet_days_total_logit",
+                                "prop_extreme_dry_days_total_logit",
+                                "temp_seasonality_5_yr_ave",
+                                "precip_seasonality_5_yr_ave",
+                                "precip_5_yr_ave",
+                                "tmean_5_yr_ave")] |> 
+    pivot_longer(cols = 1:16, names_to = "var", values_to = "value") |> 
+    group_by(var) |> 
+    summarise(ave = mean(value), std = sd(value), .groups = "drop") |> 
+    mutate(up_1 = ave + std, low_1 = ave - std,
+           up_1.5 = ave + 1.5 * std, low_1.5 = ave - 1.5 * std)
+  
+  d_late_ave_std = d_late[, c("prop_extreme_warm_days_before_onset_logit", 
+                                "prop_extreme_cold_days_before_onset_logit",
+                                "prop_extreme_wet_days_before_onset_logit",
+                                "prop_extreme_dry_days_before_onset_logit",
+                                "prop_extreme_warm_days_within_duration_logit",
+                                "prop_extreme_cold_days_within_duration_logit",
+                                "prop_extreme_wet_days_within_duration_logit",
+                                "prop_extreme_dry_days_within_duration_logit",
+                                "prop_extreme_warm_days_total_logit",
+                                "prop_extreme_cold_days_total_logit",
+                                "prop_extreme_wet_days_total_logit",
+                                "prop_extreme_dry_days_total_logit",
+                                "temp_seasonality_5_yr_ave",
+                                "precip_seasonality_5_yr_ave",
+                                "precip_5_yr_ave",
+                                "tmean_5_yr_ave")] |> 
+    pivot_longer(cols = 1:16, names_to = "var", values_to = "value") |> 
+    group_by(var) |> 
+    summarise(ave = mean(value), std = sd(value), .groups = "drop") |> 
+    mutate(up_1 = ave + std, low_1 = ave - std,
+           up_1.5 = ave + 1.5 * std, low_1.5 = ave - 1.5 * std)
+  
+  saveRDS(d_early_ave_std, "data_output/d_early_ave_std.rds")
+  saveRDS(d_middle_ave_std, "data_output/d_middle_ave_std.rds")
+  saveRDS(d_late_ave_std, "data_output/d_late_ave_std.rds")
+  
+  
   # scale 
   d2 = d |> mutate_at(c("prop_extreme_warm_days_before_onset_logit", 
                         "prop_extreme_cold_days_before_onset_logit",
@@ -267,6 +385,174 @@ if(!file.exists("data_output/d_for_stat.rds")){
                      starts_with("prop"))
   
   saveRDS(d2, "data_output/d_for_stat.rds")
+  
+  d2_early = d_early |> mutate_at(c("prop_extreme_warm_days_before_onset_logit", 
+                        "prop_extreme_cold_days_before_onset_logit",
+                        "prop_extreme_wet_days_before_onset_logit",
+                        "prop_extreme_dry_days_before_onset_logit",
+                        "prop_extreme_warm_days_within_duration_logit",
+                        "prop_extreme_cold_days_within_duration_logit",
+                        "prop_extreme_wet_days_within_duration_logit",
+                        "prop_extreme_dry_days_within_duration_logit",
+                        "prop_extreme_warm_days_total_logit",
+                        "prop_extreme_cold_days_total_logit",
+                        "prop_extreme_wet_days_total_logit",
+                        "prop_extreme_dry_days_total_logit",
+                        "precip_current_yr",
+                        "tmean_current_yr",
+                        "temp_seasonality_5_yr_ave",
+                        "precip_seasonality_5_yr_ave",
+                        "precip_5_yr_ave",
+                        "tmean_5_yr_ave", # "pop_25km_log10",
+                        "elev", "n_days_log"), 
+                      ~(scale(.) %>% as.vector))
+  
+  d2_early = dplyr::select(d2_early, taxon, yr, id_cells, sp, n_days_log, onset, offset, duration_log,
+                     elev, tmean_5_yr_ave, precip_5_yr_ave, precip_current_yr, tmean_current_yr,
+                     temp_seasonality_5_yr_ave, precip_seasonality_5_yr_ave, # pop_25km_log10,
+                     starts_with("prop"))
+  
+  saveRDS(d2_early, "data_output/d_early_for_stat.rds")
+  
+  d2_middle = d_middle |> mutate_at(c("prop_extreme_warm_days_before_onset_logit", 
+                                    "prop_extreme_cold_days_before_onset_logit",
+                                    "prop_extreme_wet_days_before_onset_logit",
+                                    "prop_extreme_dry_days_before_onset_logit",
+                                    "prop_extreme_warm_days_within_duration_logit",
+                                    "prop_extreme_cold_days_within_duration_logit",
+                                    "prop_extreme_wet_days_within_duration_logit",
+                                    "prop_extreme_dry_days_within_duration_logit",
+                                    "prop_extreme_warm_days_total_logit",
+                                    "prop_extreme_cold_days_total_logit",
+                                    "prop_extreme_wet_days_total_logit",
+                                    "prop_extreme_dry_days_total_logit",
+                                    "precip_current_yr",
+                                    "tmean_current_yr",
+                                    "temp_seasonality_5_yr_ave",
+                                    "precip_seasonality_5_yr_ave",
+                                    "precip_5_yr_ave",
+                                    "tmean_5_yr_ave", # "pop_25km_log10",
+                                    "elev", "n_days_log"), 
+                                  ~(scale(.) %>% as.vector))
+  
+  d2_middle = dplyr::select(d2_middle, taxon, yr, id_cells, sp, n_days_log, onset, offset, duration_log,
+                           elev, tmean_5_yr_ave, precip_5_yr_ave, precip_current_yr, tmean_current_yr,
+                           temp_seasonality_5_yr_ave, precip_seasonality_5_yr_ave, # pop_25km_log10,
+                           starts_with("prop"))
+  
+  saveRDS(d2_middle, "data_output/d_middle_for_stat.rds")
+  
+  d2_late = d_late |> mutate_at(c("prop_extreme_warm_days_before_onset_logit", 
+                                    "prop_extreme_cold_days_before_onset_logit",
+                                    "prop_extreme_wet_days_before_onset_logit",
+                                    "prop_extreme_dry_days_before_onset_logit",
+                                    "prop_extreme_warm_days_within_duration_logit",
+                                    "prop_extreme_cold_days_within_duration_logit",
+                                    "prop_extreme_wet_days_within_duration_logit",
+                                    "prop_extreme_dry_days_within_duration_logit",
+                                    "prop_extreme_warm_days_total_logit",
+                                    "prop_extreme_cold_days_total_logit",
+                                    "prop_extreme_wet_days_total_logit",
+                                    "prop_extreme_dry_days_total_logit",
+                                    "precip_current_yr",
+                                    "tmean_current_yr",
+                                    "temp_seasonality_5_yr_ave",
+                                    "precip_seasonality_5_yr_ave",
+                                    "precip_5_yr_ave",
+                                    "tmean_5_yr_ave", # "pop_25km_log10",
+                                    "elev", "n_days_log"), 
+                                  ~(scale(.) %>% as.vector))
+  
+  d2_late = dplyr::select(d2_late, taxon, yr, id_cells, sp, n_days_log, onset, offset, duration_log,
+                           elev, tmean_5_yr_ave, precip_5_yr_ave, precip_current_yr, tmean_current_yr,
+                           temp_seasonality_5_yr_ave, precip_seasonality_5_yr_ave, # pop_25km_log10,
+                           starts_with("prop"))
+  
+  saveRDS(d2_late, "data_output/d_late_for_stat.rds")
+  
+  
+  # species genus know to be pollinated by moths and butterflies
+  g = googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1SoTGsd1KdqpJdKP1PuGezq0aPSdwh4IkCtZKQZ2wceI/edit#gid=254374704", sheet = 3)
+  g = sort(unique(g$Genus))
+  
+  g2 = googlesheets4::read_sheet("https://docs.google.com/spreadsheets/d/1SoTGsd1KdqpJdKP1PuGezq0aPSdwh4IkCtZKQZ2wceI/edit#gid=254374704", sheet = 4)
+  g2 = sort(unique(g2$genus))
+  
+  intersect(g, g2)
+  
+  g2 = c(g, g2, filter(rtrees::classifications, taxon == "plant", family %in% c("Apiaceae", "Echinacea", "Asteraceae"))$genus) |> unique()
+  
+  plts = rtrees::sp_list_df(unique(filter(d, taxon == "plant")$sp), "plant")
+  filter(plts, genus %in% g2) # 317 plants
+  intersect(plts$genus, filter(rtrees::classifications, taxon == "plant", family %in% c("Apiaceae", "Echinacea"))$genus)
+  
+  sub_plant = filter(plts, genus %in% g2) |> 
+    mutate(sp = str_replace_all(species, "_", " ")) |> 
+    pull(sp)
+  
+  setdiff(unique(filter(d, taxon == "insect")$sp), filter(yr_around, Family != "Saturniidae")$sp)
+  
+  insect_rm = c(filter(yr_around, Family == "Saturniidae")$sp, 
+                "Syssphinx heiligbrodti", "Actias luna", 
+                "Anisota pellucida", "Anisota stigma", "Citheronia regalis",
+                "Coloradia pandora", "Eupackardia calleta", "Hemileuca eglanterina",
+                "Hyalophora cecropia", "Hyalophora euryalus", "Syssphinx hubbardi")
+  
+  
+  d_subset = filter(d, !sp %in% insect_rm) |> filter(taxon == "insect" | sp %in% sub_plant)
+  
+  d_subset_ave_std = d_subset[, c("prop_extreme_warm_days_before_onset_logit", 
+                              "prop_extreme_cold_days_before_onset_logit",
+                              "prop_extreme_wet_days_before_onset_logit",
+                              "prop_extreme_dry_days_before_onset_logit",
+                              "prop_extreme_warm_days_within_duration_logit",
+                              "prop_extreme_cold_days_within_duration_logit",
+                              "prop_extreme_wet_days_within_duration_logit",
+                              "prop_extreme_dry_days_within_duration_logit",
+                              "prop_extreme_warm_days_total_logit",
+                              "prop_extreme_cold_days_total_logit",
+                              "prop_extreme_wet_days_total_logit",
+                              "prop_extreme_dry_days_total_logit",
+                              "temp_seasonality_5_yr_ave",
+                              "precip_seasonality_5_yr_ave",
+                              "precip_5_yr_ave",
+                              "tmean_5_yr_ave")] |> 
+    pivot_longer(cols = 1:16, names_to = "var", values_to = "value") |> 
+    group_by(var) |> 
+    summarise(ave = mean(value), std = sd(value), .groups = "drop") |> 
+    mutate(up_1 = ave + std, low_1 = ave - std,
+           up_1.5 = ave + 1.5 * std, low_1.5 = ave - 1.5 * std)
+  
+  saveRDS(d_subset_ave_std, "data_output/d_subset_ave_std.rds")
+  
+  d2_subset = d_subset |> mutate_at(c("prop_extreme_warm_days_before_onset_logit", 
+                                  "prop_extreme_cold_days_before_onset_logit",
+                                  "prop_extreme_wet_days_before_onset_logit",
+                                  "prop_extreme_dry_days_before_onset_logit",
+                                  "prop_extreme_warm_days_within_duration_logit",
+                                  "prop_extreme_cold_days_within_duration_logit",
+                                  "prop_extreme_wet_days_within_duration_logit",
+                                  "prop_extreme_dry_days_within_duration_logit",
+                                  "prop_extreme_warm_days_total_logit",
+                                  "prop_extreme_cold_days_total_logit",
+                                  "prop_extreme_wet_days_total_logit",
+                                  "prop_extreme_dry_days_total_logit",
+                                  "precip_current_yr",
+                                  "tmean_current_yr",
+                                  "temp_seasonality_5_yr_ave",
+                                  "precip_seasonality_5_yr_ave",
+                                  "precip_5_yr_ave",
+                                  "tmean_5_yr_ave", # "pop_25km_log10",
+                                  "elev", "n_days_log"), 
+                                ~(scale(.) %>% as.vector))
+  
+  d2_subset = dplyr::select(d2_subset, taxon, yr, id_cells, sp, n_days_log, onset, offset, duration_log,
+                          elev, tmean_5_yr_ave, precip_5_yr_ave, precip_current_yr, tmean_current_yr,
+                          temp_seasonality_5_yr_ave, precip_seasonality_5_yr_ave, # pop_25km_log10,
+                          starts_with("prop"))
+  
+  saveRDS(d2_subset, "data_output/d_subset_for_stat.rds")
+  
   
   hist(d$prop_extreme_warm_days_before_onset_logit)
   hist(d$prop_extreme_cold_days_before_onset_logit)

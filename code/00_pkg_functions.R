@@ -304,3 +304,7 @@ logit_trans = function(x){
   x = ifelse(x == 1, x - 0.01, x)
   log(x / (1 - x))
 }
+
+logit_back_to_prop = function(y){
+  exp(y) / (1 + exp(y))
+}
